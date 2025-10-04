@@ -4,27 +4,61 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+<!--    Everytime you create a new version, create a new tag e.g for v1.0.1-->
+<!--    git tag v1.0.1-->
+<!--    git push origin v1.0.1-->
+<!--    This helps with the scm tag-->
+
+    <properties>
+        <version>1.0.0</version>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.release>17</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
     <groupId>io.github.lekan128.aiagent</groupId>
     <artifactId>ai-agent-parent</artifactId>
-    <version>1.0.0</version>
+    <version>${version}</version>
     <packaging>pom</packaging>
 
     <name>AI Agent</name>
     <description>AI Agent Java library</description>
     <url>https://github.com/Lekan128/AiAgent</url>
 
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/licenses/MIT</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>lekan128</id>
+            <name>Olalekan Amoo</name>
+            <email>mail@gmail.com</email>
+            <url>https://github.com/lekan128</url>
+            <roles>
+                <role>developer</role>
+            </roles>
+            <organization>Independent</organization>
+        </developer>
+    </developers>
+
+    <scm>
+        <url>https://github.com/lekan128/ai-agent</url>
+        <connection>scm:git:https://github.com/lekan128/AiAgent.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/lekan128/AiAgent.git</developerConnection>
+        <tag>v${version}</tag>
+    </scm>
+
     <modules>
         <module>AiAgentImpl</module>
         <module>AiAgentApi</module>
         <module>AiAgentCore</module>
     </modules>
-
-    <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
-        <maven.compiler.release>17</maven.compiler.release>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
 
     <build>
         <plugins>
