@@ -15,9 +15,21 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * @apiNote Internal API. Not intended for external use.
- * &#064;Internal
- * Not part of the public API. Subject to change without notice.
+ * Core utility class responsible for executing a sequence of method calls
+ * based on LLM-generated reflection requests, managing method context between calls.
+ *
+ * <p>This class enables the sequential execution of tool calls (using the output of one method as the argument for the next), allowing the output
+ * of one method to be used as the input (via the shared context map) for a subsequent method.</p>
+ *
+ * <p><strong>Note:</strong> This class is internal-facing and manages complex reflection and
+ * argument matching, making its methods prone to throwing numerous checked exceptions.</p>
+ *
+ * <p><strong>Internal API:</strong> This class is strictly for internal library use
+ * and is not intended for external consumption. Its methods and structure are subject
+ * to change without notice.</p>
+ *
+ * @author Olalekan
+ * @since 1.0.0
  */
 public class ReflectionCaller {
     private static Object invokeMethodFromJson(String json) throws Exception {
@@ -82,6 +94,29 @@ public class ReflectionCaller {
         return executePipeline(reflectionInvocableMethods);
     }
 
+    /**
+     * Executes a pipeline of method calls sequentially, maintaining an execution context
+     * to pass results between stages.
+     *
+     * <p>Imp. details</p>
+     * <p>For each request:
+     * <ol>
+     * <li>The specified method is invoked using reflection.</li>
+     * <li>If {@link ReflectionInvocableMethod#getReturnObjectKey()} is not null, the result is
+     * stored in the context map using that key.</li>
+     * <li>The execution result is added to the final result list.</li>
+     * </ol>
+     * <p>The process assumes the existence of the internal {@code callMethodWithContext} method
+     * for argument matching and invocation.</p>
+     *
+     * @param requests A list of {@link ReflectionInvocableMethod} objects defining the pipeline steps.
+     * @return A list of {@link MethodExecutionResult} objects, detailing the outcome of each step.
+     * @throws ClassNotFoundException If the class specified in a request cannot be found.
+     * @throws InvocationTargetException If the invoked method throws an exception.
+     * @throws NoSuchMethodException If the method specified in a request cannot be found with matching arguments.
+     * @throws InstantiationException If the target class is abstract or an interface and cannot be instantiated.
+     * @throws IllegalAccessException If the method or class is not accessible.
+     */
     public static List<MethodExecutionResult> executePipeline(List<ReflectionInvocableMethod> requests) throws ClassNotFoundException, InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
         Map<String, Object> context = new HashMap<>();
         List<MethodExecutionResult> results = new ArrayList<>();

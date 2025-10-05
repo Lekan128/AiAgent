@@ -13,7 +13,51 @@ import io.github.lekan128.aiagent.impl.method.caller.ReflectionInvocableMethod;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 
+/**
+ * Concrete, internal implementation of the {@link Agent} interface.
+ *
+ * <p>This class contains the core business logic for the AI Agent workflow, including
+ * prompt generation, orchestrating tool calling (reflection and execution), and
+ * final response generation.</p>
+ *
+ * <p><strong>Internal API:</strong> This class is strictly for internal library use
+ * and is not intended for external consumption. Its methods and structure are subject
+ * to change without notice. Users must obtain an instance via {@code AgentProvider}.</p>
+ *
+ * @author Olalekan
+ * @since 1.0.0
+ * @see Agent
+ * see AgentProvider
+ */
 class AgentImpl implements Agent {
+
+    /**
+     * Executes the main AI Agent workflow, coordinating the user query, LLM calls, and structured response generation.
+     *
+     * <p>The workflow proceeds in three phases:
+     * <ol>
+     * <li>**Planning:** Calls the LLM (via an assumed internal method {@code callWithToolsForPlan})
+     * to determine if any tools are needed, resulting in a list of method execution requests.</li>
+     * <li>**Execution:** Executes the planned tool calls sequentially using {@link ReflectionCaller#executePipeline(List)},
+     * collecting the results.</li>
+     * <li>**Final Response:** Calls the LLM again (via an assumed internal method {@code callForFinalResponse}),
+     * providing the tool results and original query, to generate the final response and map it to the
+     * specified {@code responseClass}.</li>
+     * </ol></p>
+     *
+     * @param <T> The target type to which the LLM's final response should be mapped.
+     * @param userQuery The specific request or question from the user.
+     * @param aiPersona The defined role or personality for the AI to adopt.
+     * @param llm The specific {@link LLM} instance to be used.
+     * @param responseClass The Java class representing the desired structured response type.
+     * @return An instance of type {@code T} containing the structured response data.
+     * @throws JsonProcessingException If there is an error during the final response deserialization.
+     * @throws ClassNotFoundException If a class used in reflection (tool call) cannot be found.
+     * @throws InvocationTargetException If an invoked tool method throws an exception.
+     * @throws NoSuchMethodException If a required constructor or method (in a tool or response class) is not found.
+     * @throws InstantiationException If the system is unable to create a new instance (tool or response class).
+     * @throws IllegalAccessException If the application does not have access to a definition (tool or response class).
+     */
     @Override
     public <T> T useAgent(String userQuery, String aiPersona, LLM llm, Class<T> responseClass) throws JsonProcessingException, ClassNotFoundException, InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
         List<ReflectionInvocableMethod> invocableMethodList = AgentImpl.callWithToolsForPlan(
@@ -21,8 +65,6 @@ class AgentImpl implements Agent {
         );
 
         List<MethodExecutionResult> methodExecutionResults = ReflectionCaller.executePipeline(invocableMethodList);
-        System.out.println(ObjectMapperSingleton.getObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(methodExecutionResults));
-        System.out.println("###############");
 
         T response = AgentImpl.callForFinalResponse(aiPersona, userQuery, methodExecutionResults, llm, responseClass);
         return response;
