@@ -12,12 +12,22 @@ Java 17+
 ## To use
 Add to your pom.xml
 ```xml
+<dependency>
+    <groupId>io.github.lekan128.aiagent</groupId>
+    <artifactId>ai-agent-api</artifactId>
+    <version>1.0.0</version>
+</dependency>
+<dependency>
+    <groupId>io.github.lekan128.aiagent</groupId>
+    <artifactId>ai-agent-core</artifactId>
+    <version>1.0.0</version>
+</dependency>
 
 ```
 
-Add to your .env file
+Add the following to your .env file
 ```
-# If you plan to use the default gemini llm added to the library
+# If you plan to use the default gemini llm added to the library. Go to https://aistudio.google.com/api-keys to get an api key if you dont have one
 GEMINI_API_KEY=YOUR_GEMINI_API_KEY 
 
 # Your package name that contains all the methods annotated with @AiToolMethod 
