@@ -9,6 +9,10 @@
         <version>1.0.0</version>
     </parent>
 
+    <name>AI Agent API</name>
+    <description>API module of the AI Agent Java library (api)</description>
+    <url>https://github.com/lekan128/AiAgent</url>
+
     <artifactId>ai-agent-api</artifactId>
     <packaging>jar</packaging>
 

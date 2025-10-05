@@ -9,6 +9,10 @@
         <version>1.0.0</version>
     </parent>
 
+    <name>AI Agent API Core</name>
+    <description>API module of the AI Agent Java library (core)</description>
+    <url>https://github.com/lekan128/AiAgent</url>
+
     <artifactId>ai-agent-core</artifactId>
     <packaging>jar</packaging>
 
