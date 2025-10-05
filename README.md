@@ -248,3 +248,12 @@ So, as long as your GPG key’s email matches your GitHub/Maven Central account 
 
 When you run `mvn clean deploy -Prelease` and you have the Maven GPG plugin configured, Maven runs: `gpg --sign`
 By default, GPG looks for your default key, which you can check with:`gpg --list-secret-keys --keyid-format LONG`
+
+## For future version change
+create a new tag e.g for v1.0.1
+```bash
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+Remember to change the project.version.string in the parent's pom.xml
