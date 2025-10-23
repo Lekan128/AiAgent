@@ -13,7 +13,7 @@
 <!--    This is for the scm. Also create a push a git tag as stated above-->
 
     <properties>
-        <project.version.string>1.0.0</project.version.string>
+        <project.version.string>1.0.1-Snapshot</project.version.string>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <maven.compiler.release>17</maven.compiler.release>
@@ -22,7 +22,7 @@
 
     <groupId>io.github.lekan128.aiagent</groupId>
     <artifactId>ai-agent-parent</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1-Snapshot</version>
     <packaging>pom</packaging>
 
     <name>AI Agent</name>

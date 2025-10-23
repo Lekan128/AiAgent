@@ -5,7 +5,7 @@ package io.github.lekan128.aiagent.api.llm;
  *
  * <p>Users are expected to **create concrete subclasses** of {@code LLM} to integrate any
  * proprietary or third-party Language Model API (e.g., custom local models, Azure OpenAI, etc.).
- * Any class extending {@code LLM} can be passed to the {@link io.github.lekan128.aiagent.api.Agent#useAgent(String, String, LLM, Class)}
+ * Any class extending {@code LLM} can be passed to the {@link io.github.lekan128.aiagent.api.Agent#useAgent(String, String, LLM, Class, java.lang.reflect.Type...)}
  * method, providing a flexible, provider-agnostic system for your application.</p>
  *
  * <p>This abstraction is crucial for maintaining a decoupled and provider-agnostic agent workflow.</p>

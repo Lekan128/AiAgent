@@ -6,7 +6,7 @@
     <parent>
         <groupId>io.github.lekan128.aiagent</groupId>
         <artifactId>ai-agent-parent</artifactId>
-        <version>1.0.0</version>
+        <version>1.0.1-Snapshot</version>
     </parent>
 
     <name>AI Agent API Implementation</name>
@@ -26,7 +26,7 @@
         <dependency>
             <groupId>io.github.lekan128.aiagent</groupId>
             <artifactId>ai-agent-api</artifactId>
-            <version>1.0.0</version>
+            <version>1.0.1-Snapshot</version>
         </dependency>
         <dependency>
             <groupId>com.google.genai</groupId>

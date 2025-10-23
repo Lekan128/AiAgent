@@ -11,6 +11,7 @@ import io.github.lekan128.aiagent.impl.method.caller.ReflectionCaller;
 import io.github.lekan128.aiagent.impl.method.caller.ReflectionInvocableMethod;
 
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Type;
 import java.util.List;
 
 /**
@@ -59,14 +60,14 @@ class AgentImpl implements Agent {
      * @throws IllegalAccessException If the application does not have access to a definition (tool or response class).
      */
     @Override
-    public <T> T useAgent(String userQuery, String aiPersona, LLM llm, Class<T> responseClass) throws JsonProcessingException, ClassNotFoundException, InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
+    public <T> T useAgent(String userQuery, String aiPersona, LLM llm, Class<T> responseClass, Type... responseTypeParameters) throws JsonProcessingException, ClassNotFoundException, InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
         List<ReflectionInvocableMethod> invocableMethodList = AgentImpl.callWithToolsForPlan(
                 userQuery, llm
         );
 
         List<MethodExecutionResult> methodExecutionResults = ReflectionCaller.executePipeline(invocableMethodList);
 
-        T response = AgentImpl.callForFinalResponse(aiPersona, userQuery, methodExecutionResults, llm, responseClass);
+        T response = AgentImpl.callForFinalResponse(aiPersona, userQuery, methodExecutionResults, llm, responseClass, responseTypeParameters);
         return response;
     }
 
@@ -83,7 +84,7 @@ class AgentImpl implements Agent {
             response = objectMapper.readValue(generateContentResponse
                             .replace("```json", "")
                             .replace("```", ""),
-                    new TypeReference<>() {
+                    new TypeReference<List<ReflectionInvocableMethod>>() {
                     });
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Unable to convert " + llm.getModelName() + " generateContentResponse to POJO\n"+e);
@@ -155,8 +156,8 @@ class AgentImpl implements Agent {
      *
      * @param aiPersona example = "A product describer, that give description of products to be sold online"
      * */
-    private static <T> T callForFinalResponse(String aiPersona, String userQuery, List<MethodExecutionResult> executionResults, LLM llm, Class<T> responseType) throws JsonProcessingException {
-        String completePrompt = getPromptForFinalResult(aiPersona, userQuery, executionResults, responseType);
+    private static <T> T callForFinalResponse(String aiPersona, String userQuery, List<MethodExecutionResult> executionResults, LLM llm, Class<T> responseType, Type... responseTypeParameters) throws JsonProcessingException {
+        String completePrompt = getPromptForFinalResult(aiPersona, userQuery, executionResults, responseType, responseTypeParameters);
 
 
         String generateContentResponse = llm.call(completePrompt);
@@ -172,9 +173,9 @@ class AgentImpl implements Agent {
         return response;
     }
 
-    private static <T> String getPromptForFinalResult(String aiPersonality, String userQuery, List<MethodExecutionResult> executionResults, Class<T> responseType) throws JsonProcessingException {
+    private static <T> String getPromptForFinalResult(String aiPersonality, String userQuery, List<MethodExecutionResult> executionResults, Class<T> responseType, Type... responseTypeParameters) throws JsonProcessingException {
         String toolResultsJson = ObjectMapperSingleton.getObjectMapper().writeValueAsString(executionResults); // The JSON from your list of ToolExecutionResult
-        String finalOutputFormat = Util.convertToString(responseType);
+        String finalOutputFormat = Util.convertToString(responseType, responseTypeParameters);
         String chatHistoryJson = "";
 
         String synthesisPrompt = String.format("""

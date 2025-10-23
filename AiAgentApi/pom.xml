@@ -6,7 +6,7 @@
     <parent>
         <groupId>io.github.lekan128.aiagent</groupId>
         <artifactId>ai-agent-parent</artifactId>
-        <version>1.0.0</version>
+        <version>1.0.1-Snapshot</version>
     </parent>
 
     <name>AI Agent API</name>

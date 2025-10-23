@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import io.github.lekan128.aiagent.api.llm.LLM;
 
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Type;
 
 /**
  * Represents the core Artificial Intelligence (AI) Agent defined in the ai-agent-core library.
@@ -40,6 +41,9 @@ public interface Agent {
      *  response (e.g.,
      *  {a ProductDescription class which can have a String productName, String description, List.of(String) attributes, Double price}).
      *  The LLM's output will be mapped to an object of this type.
+     * @param responseTypeParameters an array of Types(classes for the response type).
+     *  For example, if the response type you want is a List of Strings, then you would use it like this:
+     *  useAgent(userQuery, aiPersona, llm, List.class, String.class)
      * @return An instance of type {@code T} containing the structured response data
      *  as mapped from the LLM's output (typically JSON).
      * @throws JsonProcessingException If there is an error during the deserialization of
@@ -55,5 +59,5 @@ public interface Agent {
      * @throws IllegalAccessException If the application does not have access to a definition
      * of the specified class, field, method, or constructor.
      */
-    <T> T useAgent(String userQuery, String aiPersona, LLM llm, Class<T> responseClass) throws JsonProcessingException, ClassNotFoundException, InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException;
+    <T> T useAgent(String userQuery, String aiPersona, LLM llm, Class<T> responseClass, Type... responseTypeParameters) throws JsonProcessingException, ClassNotFoundException, InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException;
 }
