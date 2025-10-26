@@ -4,10 +4,14 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.github.lekan128.aiagent</groupId>
+        <groupId>io.github.lekan128.aiagent</groupId>
         <artifactId>ai-agent-parent</artifactId>
-        <version>1.0.0</version>
+        <version>1.0.1-Snapshot</version>
     </parent>
+
+    <name>AI Agent API</name>
+    <description>API module of the AI Agent Java library (api)</description>
+    <url>https://github.com/lekan128/AiAgent</url>
 
     <artifactId>ai-agent-api</artifactId>
     <packaging>jar</packaging>

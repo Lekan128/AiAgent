@@ -4,10 +4,14 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.github.lekan128.aiagent</groupId>
+        <groupId>io.github.lekan128.aiagent</groupId>
         <artifactId>ai-agent-parent</artifactId>
-        <version>1.0.0</version>
+        <version>1.0.1-Snapshot</version>
     </parent>
+
+    <name>AI Agent API Implementation</name>
+    <description>API module of the AI Agent Java library (impl)</description>
+    <url>https://github.com/lekan128/AiAgent</url>
 
     <artifactId>ai-agent-impl</artifactId>
     <packaging>jar</packaging>
@@ -20,9 +24,9 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.github.lekan128.aiagent</groupId>
+            <groupId>io.github.lekan128.aiagent</groupId>
             <artifactId>ai-agent-api</artifactId>
-            <version>1.0.0</version>
+            <version>1.0.1-Snapshot</version>
         </dependency>
         <dependency>
             <groupId>com.google.genai</groupId>
@@ -46,6 +50,16 @@
             <groupId>jakarta.annotation</groupId>
             <artifactId>jakarta.annotation-api</artifactId>
             <version>3.0.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

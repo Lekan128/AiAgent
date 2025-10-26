@@ -4,37 +4,153 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.github.lekan128.aiagent</groupId>
+<!--    Everytime you create a new version, create a new tag e.g for v1.0.1-->
+<!--    git tag v1.0.1-->
+<!--    git push origin v1.0.1-->
+<!--    This helps with the scm tag-->
+
+<!--    For updates to a new version remember to change the project.version.string-->
+<!--    This is for the scm. Also create a push a git tag as stated above-->
+
+    <properties>
+        <project.version.string>1.0.1-Snapshot</project.version.string>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.release>17</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <junit.jupiter.version>5.11.0</junit.jupiter.version>
+    </properties>
+
+    <groupId>io.github.lekan128.aiagent</groupId>
     <artifactId>ai-agent-parent</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1-Snapshot</version>
     <packaging>pom</packaging>
+
+    <name>AI Agent</name>
+    <description>AI Agent Java library</description>
+    <url>https://github.com/Lekan128/AiAgent</url>
+
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/licenses/MIT</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>lekan128</id>
+            <name>Olalekan Amoo</name>
+            <email>mail@gmail.com</email>
+            <url>https://github.com/lekan128</url>
+            <roles>
+                <role>developer</role>
+            </roles>
+            <organization>Independent</organization>
+        </developer>
+    </developers>
+
+    <profiles>
+        <profile>
+            <id>release</id>
+            <properties>
+                <gpg.passphrase>${gpg.passphrase}</gpg.passphrase>
+            </properties>
+        </profile>
+    </profiles>
+
+    <scm>
+        <url>https://github.com/lekan128/AiAgent</url>
+        <connection>scm:git:https://github.com/lekan128/AiAgent.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/lekan128/AiAgent.git</developerConnection>
+        <tag>v${project.version.string}</tag>
+    </scm>
+
     <modules>
         <module>AiAgentImpl</module>
         <module>AiAgentApi</module>
         <module>AiAgentCore</module>
     </modules>
 
-    <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
-
     <build>
-        <pluginManagement>
-            <plugins>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.14.0</version>
-                    <configuration>
-                        <source>17</source>
-                        <target>17</target>
-                        <release>17</release>
-                    </configuration>
-                </plugin>
-            </plugins>
-        </pluginManagement>
+        <plugins>
+
+<!--        Compiler    -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.14.0</version>
+                <configuration>
+                    <source>${maven.compiler.source}</source>
+                    <target>${maven.compiler.target}</target>
+                    <release>${maven.compiler.release}</release>
+                </configuration>
+            </plugin>
+
+<!--            Central publishing-->
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <version>0.9.0</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <publishingServerId>central</publishingServerId>
+                </configuration>
+            </plugin>
+
+            <!-- Attach sources -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.3.0</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Attach javadocs -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.6.3</version>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- GPG signing -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>3.2.4</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <!--                    Optional if you want to specify a key or passphrase-->
+                <!--                    <configuration>-->
+                <!--                        <keyname>D607798E124541F905037CEB5DCCE6FEC886C4ED</keyname> -->
+                <!--                        <passphrase>${gpg.passphrase}</passphrase>-->
+                <!--                    </configuration>-->
+            </plugin>
+
+        </plugins>
     </build>
 
     <dependencyManagement>
@@ -48,6 +164,18 @@
                 <groupId>io.github.cdimascio</groupId>
                 <artifactId>dotenv-java</artifactId>
                 <version>3.2.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter-api</artifactId>
+                <version>${junit.jupiter.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter-engine</artifactId>
+                <version>${junit.jupiter.version}</version>
+                <scope>test</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
