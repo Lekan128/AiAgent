@@ -4,7 +4,6 @@ package io.github.lekan128.aiagent.api;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.github.lekan128.aiagent.api.llm.LLM;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Type;
 
 /**
@@ -49,15 +48,6 @@ public interface Agent {
      * @throws JsonProcessingException If there is an error during the deserialization of
      * the LLM's raw response (e.g., if the JSON is malformed or
      * does not match {@code responseClass} structure).
-     * @throws ClassNotFoundException If the system cannot find a required class during
-     * initialization or processing.
-     * @throws InvocationTargetException If the underlying method invocation fails.
-     * @throws NoSuchMethodException If a required constructor or method is not found on
-     * the {@code responseClass} during reflection.
-     * @throws InstantiationException If the system is unable to create a new instance of
-     * the {@code responseClass}.
-     * @throws IllegalAccessException If the application does not have access to a definition
-     * of the specified class, field, method, or constructor.
      */
-    <T> T useAgent(String userQuery, String aiPersona, LLM llm, Class<T> responseClass, Type... responseTypeParameters) throws JsonProcessingException, ClassNotFoundException, InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException;
+    <T> T useAgent(String userQuery, String aiPersona, LLM llm, Class<T> responseClass, Type... responseTypeParameters) throws JsonProcessingException;
 }

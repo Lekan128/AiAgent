@@ -3,8 +3,10 @@ package io.github.lekan128.aiagent.impl.method.caller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.lekan128.aiagent.impl.method.MethodExecutionResult;
 import io.github.lekan128.aiagent.api.ObjectMapperSingleton;
+import io.github.lekan128.aiagent.impl.method.MethodExecutionResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -32,6 +34,7 @@ import java.util.Map;
  * @since 1.0.0
  */
 public class ReflectionCaller {
+    private static final Logger logger = LoggerFactory.getLogger(ReflectionCaller.class);
     private static Object invokeMethodFromJson(String json) throws Exception {
         ObjectMapper mapper = ObjectMapperSingleton.getObjectMapper();
         ReflectionInvocableMethod request = mapper.readValue(json, ReflectionInvocableMethod.class);
@@ -47,7 +50,6 @@ public class ReflectionCaller {
                 null
         );
 
-        System.out.println("Result = " + result);
         return result;
     }
 
@@ -109,26 +111,50 @@ public class ReflectionCaller {
      * <p>The process assumes the existence of the internal {@code callMethodWithContext} method
      * for argument matching and invocation.</p>
      *
+     * <b>Exception will not be thrown if the methods are not executed properly. Check logs for exception</b>
+     *
      * @param requests A list of {@link ReflectionInvocableMethod} objects defining the pipeline steps.
      * @return A list of {@link MethodExecutionResult} objects, detailing the outcome of each step.
-     * @throws ClassNotFoundException If the class specified in a request cannot be found.
-     * @throws InvocationTargetException If the invoked method throws an exception.
-     * @throws NoSuchMethodException If the method specified in a request cannot be found with matching arguments.
-     * @throws InstantiationException If the target class is abstract or an interface and cannot be instantiated.
-     * @throws IllegalAccessException If the method or class is not accessible.
      */
-    public static List<MethodExecutionResult> executePipeline(List<ReflectionInvocableMethod> requests) throws ClassNotFoundException, InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
+    public static List<MethodExecutionResult> executePipeline(List<ReflectionInvocableMethod> requests) {
         Map<String, Object> context = new HashMap<>();
         List<MethodExecutionResult> results = new ArrayList<>();
 
-        for (ReflectionInvocableMethod req : requests) {
-            Object result = callMethodWithContext(req, context);
-            if (req.getReturnObjectKey() != null) {
-                context.put(req.getReturnObjectKey(), result);
-            }
+        int failedMethodsCount = 0;
 
-            results.add(new MethodExecutionResult(req, result));
+        for (ReflectionInvocableMethod req : requests) {
+            logger.info("→ Invoking {}", req.toString());
+
+            try {
+                Object result = callMethodWithContext(req, context);
+                logger.debug("✓ Successfully executed {}.{}.- ExecutionResult: {}",
+                        req.getClassName(), req.getMethodName(), result);
+
+                if (req.getReturnObjectKey() != null) {
+                    context.put(req.getReturnObjectKey(), result);
+                }
+
+                results.add(new MethodExecutionResult(req, result));
+
+            } catch (InvocationTargetException e) {
+                ++failedMethodsCount;
+                //User's method exception
+                Throwable targetEx = e.getTargetException();
+                logger.error("User method threw exception during {}.{}: {}",
+                        req.getClassName(), req.getMethodName(), targetEx.getMessage(), targetEx);
+                results.add(new MethodExecutionResult(req, null));
+            } catch (Exception e) {
+                ++failedMethodsCount;
+                logger.error("Error invoking {}.{} with arguments {}. Cause: {}",
+                        req.getClassName(), req.getMethodName(), req.getMethodArguments(), e.getMessage(), e);
+
+                //record null and cont.
+                results.add(new MethodExecutionResult(req, null));
+            }
         }
+
+        logger.info("Pipeline execution completed: {}/{} methods succeeded", failedMethodsCount, requests.size());
+
         return results;
     }
 
