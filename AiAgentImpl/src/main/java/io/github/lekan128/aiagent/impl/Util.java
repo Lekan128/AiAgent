@@ -3,21 +3,17 @@ package io.github.lekan128.aiagent.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.victools.jsonschema.generator.Option;
-import io.github.lekan128.aiagent.api.ObjectMapperSingleton;
 import com.github.victools.jsonschema.generator.OptionPreset;
 import com.github.victools.jsonschema.generator.SchemaGenerator;
 import com.github.victools.jsonschema.generator.SchemaGeneratorConfigBuilder;
 import com.github.victools.jsonschema.generator.SchemaVersion;
-import io.github.lekan128.aiagent.impl.method.caller.ReflectionInvocableMethod;
+import io.github.lekan128.aiagent.api.ObjectMapperSingleton;
 
 import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 class Util {
 
@@ -29,7 +25,7 @@ class Util {
 
         SchemaGenerator generator = new SchemaGenerator(configBuilder.build());
         JsonNode fullSchema = generator.generateSchema(target, typeParameters);
-        String type = fullSchema.get("type").asText();
+        String type = fullSchema.has("type") ? fullSchema.get("type").asText() : "object";
 
         ObjectMapper mapper = ObjectMapperSingleton.getObjectMapper();
 
@@ -43,34 +39,34 @@ class Util {
                 if (fullSchema.has("properties")) {
                     reducedSchema = fullSchema.get("properties");
                     flatSchema = flattenSchema(reducedSchema);
-                } else {
-                    // For maps: additionalProperties defines the type of values
-                    if (fullSchema.has("additionalProperties")) {
-                        JsonNode valNode = fullSchema.get("additionalProperties");
-//                       Todo: Fix to return {"key": "string", "value": "object/type"}
-
-                        if (valNode.get("type").asText().equals("object")) {
-
-                            // Array of objects → recurse
-                            if (valNode.has("properties")) {
-                                Map<String, Object> valueFlattenSchema = flattenSchema(valNode.get("properties"));
-                                flatSchema =  Map.of("key", "string", "value", valueFlattenSchema);
-                                return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(flatSchema);
-                            } else {
-                                flatSchema =  Map.of("key", "string", "value", "{}");
-                                return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(flatSchema);
-                            }
-                        }
-
-                        flatSchema = Map.of("key", "string", "value",valNode.get("type").asText());
-                        return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(flatSchema);
-                    } else {
-                        return  "{}";
-                    }
+                    json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(flatSchema);
+                    return json;
                 }
 
-                json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(flatSchema);
-                return json;
+                // For maps: additionalProperties defines the type of values
+                if (fullSchema.has("additionalProperties")) {
+                    JsonNode valNode = fullSchema.get("additionalProperties");
+
+                    if (valNode.get("type").asText().equals("object")) {
+
+                        // Array of objects → recurse
+                        if (valNode.has("properties")) {
+                            Map<String, Object> valueFlattenSchema = flattenSchema(valNode.get("properties"));
+                            flatSchema =  Map.of("key", "string", "value", valueFlattenSchema);
+                            return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(flatSchema);
+                        } else {
+                            flatSchema =  Map.of("key", "string", "value", "{}");
+                            return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(flatSchema);
+                        }
+                    }
+
+                    flatSchema = Map.of("key", "string", "value",valNode.get("type").asText());
+                    return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(flatSchema);
+                }
+
+                //Unknown
+                return  "{}";
+
             }
             case "array" -> {
                 reducedSchema = fullSchema.get("items");
@@ -87,67 +83,19 @@ class Util {
                     Map[] flatSchema1 = {flatSchema};
                     json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(flatSchema1);
                     return json;
-                } else {
-                    String[] types = {reducedSchema.get("type").asText()};
-
-                    json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(types);
-
-                    return json;
                 }
+                String[] types = {reducedSchema.get("type").asText()};
+
+                json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(types);
+
+                return json;
+
             }
             default -> {
                 return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(fullSchema.get("type"));
             }
         }
 
-        /*if (type.equals("object")){
-            JsonNode reducedSchema = fullSchema.get("properties");
-            Map<String, Object> flatSchema = flattenSchema(reducedSchema);
-
-//            ObjectMapper mapper = ObjectMapperSingleton.getObjectMapper();
-            String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(flatSchema);
-
-            return json;
-        }
-        if (type.equals("array")){
-            JsonNode reducedSchema = fullSchema.get("items");
-
-            Map<String, Object> flatSchema = null;
-
-            if (reducedSchema.get("type").asText().equals("object")) {
-                // Array of objects → recurse
-                if (reducedSchema.has("properties")) {
-                    flatSchema = flattenSchema(reducedSchema.get("properties"));
-                } else {
-                    flatSchema= new HashMap<>();
-                }
-
-
-                Map[] flatSchema1 = {flatSchema};
-                String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(flatSchema1);
-                return json;
-            } else {
-                String[] types = {reducedSchema.get("type").asText()};
-
-//                ObjectMapper mapper = ObjectMapperSingleton.getObjectMapper();
-                String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(types);
-
-//            System.out.println(json);
-                return json;
-            }
-
-        }
-
-
-
-//        Map<String, Object> flatSchema = flattenSchema(fullSchema);
-
-//        ObjectMapper mapper = ObjectMapperSingleton.getObjectMapper();
-//        String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(flatSchema);
-//
-//        System.out.println(json);
-        String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(fullSchema.get("type"));
-        return json;*/
     }
     private static Map<String, Object> flattenSchema(JsonNode propertiesNode) {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -186,14 +134,15 @@ class Util {
 
                 case "array":
                     JsonNode items = fieldDef.get("items");
+                    if (items == null || !items.has("type")){
+                        result.put(fieldName, new String[]{"Any"});
+                    } else
                     if (items.get("type").asText().equals("object")) {
                         // Array of objects → recurse
-                        if (items.has("properties")) {
-                            result.put(fieldName,
-                                    new Object[]{flattenSchema(items.get("properties"))});
-                        } else {
-                            result.put(fieldName, new Object[]{"{}"});
-                        }
+                        Map<String, Object> inner = items.has("properties")
+                                ? flattenSchema(items.get("properties"))
+                                : Map.of();
+                        result.put(fieldName, new Object[]{inner});
                     } else {
                         // Array of scalars
                         result.put(fieldName, new String[]{items.get("type").asText()});
