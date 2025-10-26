@@ -62,4 +62,11 @@ class MethodArgument {
     public void setValue(Object value) {
         this.value = value;
     }
+
+    @Override
+    public String toString() {
+        return String.format("{type: '%s', value: '%s'}",
+                type != null ? type : "null",
+                value != null ? value.toString() : "null");
+    }
 }

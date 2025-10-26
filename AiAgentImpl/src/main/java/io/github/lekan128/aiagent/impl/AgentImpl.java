@@ -3,14 +3,15 @@ package io.github.lekan128.aiagent.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.lekan128.aiagent.impl.method.MethodExecutionResult;
 import io.github.lekan128.aiagent.api.Agent;
 import io.github.lekan128.aiagent.api.ObjectMapperSingleton;
 import io.github.lekan128.aiagent.api.llm.LLM;
+import io.github.lekan128.aiagent.impl.method.MethodExecutionResult;
 import io.github.lekan128.aiagent.impl.method.caller.ReflectionCaller;
 import io.github.lekan128.aiagent.impl.method.caller.ReflectionInvocableMethod;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Type;
 import java.util.List;
 
@@ -31,6 +32,8 @@ import java.util.List;
  * see AgentProvider
  */
 class AgentImpl implements Agent {
+
+    private static final Logger logger = LoggerFactory.getLogger(AgentImpl.class);
 
     /**
      * Executes the main AI Agent workflow, coordinating the user query, LLM calls, and structured response generation.
@@ -53,21 +56,25 @@ class AgentImpl implements Agent {
      * @param responseClass The Java class representing the desired structured response type.
      * @return An instance of type {@code T} containing the structured response data.
      * @throws JsonProcessingException If there is an error during the final response deserialization.
-     * @throws ClassNotFoundException If a class used in reflection (tool call) cannot be found.
-     * @throws InvocationTargetException If an invoked tool method throws an exception.
-     * @throws NoSuchMethodException If a required constructor or method (in a tool or response class) is not found.
-     * @throws InstantiationException If the system is unable to create a new instance (tool or response class).
-     * @throws IllegalAccessException If the application does not have access to a definition (tool or response class).
      */
     @Override
-    public <T> T useAgent(String userQuery, String aiPersona, LLM llm, Class<T> responseClass, Type... responseTypeParameters) throws JsonProcessingException, ClassNotFoundException, InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException {
+    public <T> T useAgent(String userQuery, String aiPersona, LLM llm, Class<T> responseClass, Type... responseTypeParameters) throws JsonProcessingException{
+        logger.info("-> Getting plan from AI Agent for query: {}", userQuery);
         List<ReflectionInvocableMethod> invocableMethodList = AgentImpl.callWithToolsForPlan(
                 userQuery, llm
         );
 
+        logger.info("-> Generated {} invocable methods:", invocableMethodList.size());
+        invocableMethodList.forEach(m -> logger.info("  {}", m));
+
+        logger.info("-> Invoking the methods (Check logs for exception)");
         List<MethodExecutionResult> methodExecutionResults = ReflectionCaller.executePipeline(invocableMethodList);
 
+        logger.info("-> Getting final response");
         T response = AgentImpl.callForFinalResponse(aiPersona, userQuery, methodExecutionResults, llm, responseClass, responseTypeParameters);
+
+        logger.info("Final response generated successfully");
+        logger.debug("Final response: {}", response);
         return response;
     }
 
