@@ -120,7 +120,7 @@ public class ReflectionCaller {
         Map<String, Object> context = new HashMap<>();
         List<MethodExecutionResult> results = new ArrayList<>();
 
-        int failedMethodsCount = 0;
+        int sucessfullyExecutedMethodCount = 0;
 
         for (ReflectionInvocableMethod req : requests) {
             logger.info("→ Invoking {}", req.toString());
@@ -135,16 +135,15 @@ public class ReflectionCaller {
                 }
 
                 results.add(new MethodExecutionResult(req, result));
+                ++sucessfullyExecutedMethodCount;
 
             } catch (InvocationTargetException e) {
-                ++failedMethodsCount;
                 //User's method exception
                 Throwable targetEx = e.getTargetException();
                 logger.error("User method threw exception during {}.{}: {}",
                         req.getClassName(), req.getMethodName(), targetEx.getMessage(), targetEx);
                 results.add(new MethodExecutionResult(req, null));
             } catch (Exception e) {
-                ++failedMethodsCount;
                 logger.error("Error invoking {}.{} with arguments {}. Cause: {}",
                         req.getClassName(), req.getMethodName(), req.getMethodArguments(), e.getMessage(), e);
 
@@ -153,7 +152,7 @@ public class ReflectionCaller {
             }
         }
 
-        logger.info("Pipeline execution completed: {}/{} methods succeeded", failedMethodsCount, requests.size());
+        logger.info("Pipeline execution completed: {}/{} methods succeeded", sucessfullyExecutedMethodCount, requests.size());
 
         return results;
     }

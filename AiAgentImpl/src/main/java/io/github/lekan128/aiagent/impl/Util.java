@@ -1,6 +1,7 @@
 package io.github.lekan128.aiagent.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.victools.jsonschema.generator.OptionPreset;
@@ -9,6 +10,7 @@ import com.github.victools.jsonschema.generator.SchemaGeneratorConfigBuilder;
 import com.github.victools.jsonschema.generator.SchemaVersion;
 import io.github.lekan128.aiagent.api.ObjectMapperSingleton;
 
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -155,5 +157,21 @@ class Util {
             }
         }
         return result;
+    }
+
+    public record RawTypeInfo(Class<?> rawType, Type[] parameters) {}
+
+    public static RawTypeInfo extractRawTypeInfo(TypeReference<?> typeReference) {
+        Type type = typeReference.getType();
+        if (type instanceof ParameterizedType parameterizedType) {
+            return new RawTypeInfo(
+                    (Class<?>) parameterizedType.getRawType(),
+                    parameterizedType.getActualTypeArguments()
+            );
+        } else if (type instanceof Class<?> clazz) {
+            return new RawTypeInfo(clazz, new Type[0]);
+        } else {
+            throw new IllegalArgumentException("Unsupported TypeReference: " + type);
+        }
     }
 }

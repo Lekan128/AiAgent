@@ -2,6 +2,7 @@ package io.github.lekan128.aiagent.api;
 
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import io.github.lekan128.aiagent.api.llm.LLM;
 
 import java.lang.reflect.Type;
@@ -50,4 +51,29 @@ public interface Agent {
      * does not match {@code responseClass} structure).
      */
     <T> T useAgent(String userQuery, String aiPersona, LLM llm, Class<T> responseClass, Type... responseTypeParameters) throws JsonProcessingException;
+
+    /**
+     * Executes the main agent functionality, processing a user query, applying an
+     * AI persona, and converting the {@link LLM}'s raw response into a specified Java object structure.
+     *
+     * <p>This method orchestrates the entire process: it generates the prompt, passes it to the
+     * specific {@code LLM} implementation via {@link LLM#call(String)}, and then uses the
+     * {@code ObjectMapperSingleton} to deserialize the response into the target class.</p>
+     *
+     * @param <T> The target type to which the LLM's response should be mapped.
+     * @param userQuery The specific request or question from the user. E.g.:
+     *  "Summarize the features of the new macbook laptop model."
+     * @param aiPersona The defined role or personality that the AI should adopt,
+     *  which guides the tone and style of the response. E.g., "An expert product describer."
+     * @param llm The specific {@link LLM} instance (e.g., {@code Gemini}) to be used
+     *  for generating the response.
+     * @param typeReference The reference of a generic type you are passing
+     *  (e.g. the type reference of a list of string or any other type)
+     * @return An instance of type {@code T} containing the structured response data
+     *  as mapped from the LLM's output (typically JSON).
+     * @throws JsonProcessingException If there is an error during the deserialization of
+     * the LLM's raw response (e.g., if the JSON is malformed or
+     * does not match {@code responseClass} structure).
+     */
+    <T> T useAgent(String userQuery, String aiPersona, LLM llm, TypeReference<T> typeReference) throws JsonProcessingException;
 }
