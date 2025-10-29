@@ -15,12 +15,12 @@ Add to your pom.xml
 <dependency>
     <groupId>io.github.lekan128.aiagent</groupId>
     <artifactId>ai-agent-api</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 </dependency>
 <dependency>
     <groupId>io.github.lekan128.aiagent</groupId>
     <artifactId>ai-agent-core</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 </dependency>
 
 ```
