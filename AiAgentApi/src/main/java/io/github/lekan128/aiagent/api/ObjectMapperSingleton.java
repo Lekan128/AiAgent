@@ -1,6 +1,7 @@
 package io.github.lekan128.aiagent.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 /**
  * Provides a singleton instance of the Jackson {@code ObjectMapper} configured for the library.
@@ -39,6 +40,8 @@ public class ObjectMapperSingleton {
                 com.fasterxml.jackson.annotation.PropertyAccessor.FIELD,
                 com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility.ANY
         );
+//        objectMapper.registerModule(new ParameterNameModule());
+        objectMapper.registerModule(new JavaTimeModule());
         return objectMapper;
     }
 }
