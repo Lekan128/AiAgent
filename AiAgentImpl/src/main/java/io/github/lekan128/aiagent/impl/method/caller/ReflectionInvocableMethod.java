@@ -97,4 +97,14 @@ public class ReflectionInvocableMethod {
     public void setReturnObjectKey(String returnObjectKey) {
         this.returnObjectKey = returnObjectKey;
     }
+
+    @Override
+    public String toString() {
+        return String.format("{class: '%s', method: '%s', args: %s, returnKey: '%s'}",
+                className != null ? className : "null",
+                methodName != null ? methodName : "null",
+                methodArguments != null ? methodArguments : "[]",
+                returnObjectKey != null ? returnObjectKey : "null");
+    }
+
 }
