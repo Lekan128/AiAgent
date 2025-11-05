@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import io.github.lekan128.aiagent.api.llm.LLM;
 
 import java.lang.reflect.Type;
+import java.util.List;
 
 /**
  * Represents the core Artificial Intelligence (AI) Agent defined in the ai-agent-core library.
@@ -76,4 +77,7 @@ public interface Agent {
      * does not match {@code responseClass} structure).
      */
     <T> T useAgent(String userQuery, String aiPersona, LLM llm, TypeReference<T> typeReference) throws JsonProcessingException;
+
+    <T> T useChatAgent(String userQuery, String aiPersona, LLM llm, TypeReference<T> typeReference, List<ChatMessage> chatHistory) throws JsonProcessingException;
+    <T> T useChatAgent(String userQuery, String aiPersona, LLM llm,  Class<T> responseClass, List<ChatMessage> chatHistory) throws JsonProcessingException;
 }
