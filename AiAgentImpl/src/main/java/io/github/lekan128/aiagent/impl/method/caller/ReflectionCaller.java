@@ -68,7 +68,7 @@ public class ReflectionCaller {
                 return instanceProvider.getInstance(clazz);
             } catch (Exception e) {
                 // fallback to default if the provider fails
-                // or rethrow depending on how strict you want it
+                logger.debug("No instanceProvider set by user. Falling back to default.");
             }
         }
         return clazz.getDeclaredConstructor().newInstance();
@@ -106,7 +106,6 @@ public class ReflectionCaller {
         method.setAccessible(true);
         // Check if static
         if (!Modifier.isStatic(method.getModifiers())) {
-//            instance = clazz.getDeclaredConstructor().newInstance();
             instance = getInstance(clazz);
         }
 
