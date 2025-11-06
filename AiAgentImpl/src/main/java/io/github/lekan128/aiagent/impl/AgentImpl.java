@@ -204,7 +204,10 @@ class AgentImpl implements Agent {
                 [RULES]
                 1. Analyze the Query: Carefully examine the user's query to understand their intent.
                 2. Select Tools: From the list of available tools, choose the most appropriate tool(s) to call.
-                3. Generate Arguments: For each tool call, determine the most effective arguments based on the user's query. Do NOT use the entire query as an argument unless it is the most logical.
+                3. Argument Generation:
+                    a. Infer Values: Determine the most effective arguments based on the user's query and chat history.
+                    b. Strict Order & Completeness: Your output MUST include an entry for **every** argument listed in the tool's definition, in the **exact** same order.
+                    c. Handle Optional Values: If an argument is marked `"required": false` and no specific value can be inferred from the query, you MUST set its `"value"` to **null**.
                 4.  Chaining Method Calls:
                     a. Saving a Result: To save a method's output for a later step, add a `"returnObjectKey"` field to its JSON object. The value should be a descriptive placeholder string, like `{{product_name}}` or `{{search_results}}`.
                     b. Using a Saved Result: To use a saved result in a subsequent method, set the argument's `"value"` to the exact placeholder string you defined in a previous step (e.g., `"value": "{{product_name}}"`).
@@ -244,6 +247,25 @@ class AgentImpl implements Agent {
                         "returnObjectKey": "{{arg0}}"
                     }
                  ]
+                3.Handling Optional/Null Arguments
+                User Query: "Can I get the complete summary of my tabs?"
+                Your Output: [
+                    {
+                        "className": "org.example.Util",
+                        "methodName": "getTabSummary",
+                        "methodArguments": [
+                            {
+                                "type": "java.time.LocalDateTime",
+                                "value": null
+                            },
+                            {
+                                "type": "java.lang.String",
+                                "value": null
+                            }
+                        ],
+                        "returnObjectKey": "{{tab_summary}}"
+                    }
+                ]
                             
                             
                 [TASK]
@@ -270,6 +292,7 @@ class AgentImpl implements Agent {
             T response = objectMapper.readValue(generateContentResponse.replace("```json", "").replace("```", ""), responseType);
             return response;
         } catch (JsonProcessingException e) {
+            logger.info("Unable to convert {} response: {} to POJO\n {}.", llm.getModelName(), generateContentResponse, e.getMessage());
             throw new RuntimeException("Unable to convert " + llm.getModelName() + " generateContentResponse to POJO\n"+e + '\n' + generateContentResponse);
         }
     }
@@ -313,7 +336,9 @@ class AgentImpl implements Agent {
                 2. Use All Context: Use the `[CHAT_HISTORY]` to understand the flow of the conversation and the `[TOOL_RESULTS]` for factual data.
                 3. Synthesize: The tool results may represent a sequence of steps. Analyse the entire chain to understand the data flow. Focus on and combine the most relevant tool responses to construct your answer.
                 4. Handle Missing Info: If the `[CHAT_HISTORY]` or `[TOOL_RESULTS]` are empty, unhelpful, or don't contain enough information, use the JSON value `null` for non-string fields (like numbers, booleans, objects) of the Final Output Format. For string fields, state that you were unable to find the details. Do not invent information.
-                5. Strictly Adhere to Format: Your final output MUST be a single, VALID JSON that conforms to the Final Output Format. Provide no other text.
+                5. Strictly Adhere to Format: Your final output MUST be a single, VALID JSON that conforms to the Final Output Format. 
+                    a. Provide no other text. Your output must be the raw, unformatted JSON.
+                    b. If the format is a JSON string, return only that string (with its outer quotes).
                                 
                 [CHAT_HISTORY]
                 %s
@@ -356,6 +381,11 @@ class AgentImpl implements Agent {
                 Chat History: ""
                 Tool Results: [{"request":{"className":"org.example.ProductService","methodName":"findProduct","methodArguments":[{"type":"java.lang.String","value":"Mona Lisa"}],"returnObjectKey" : "{{product_details}}"},"response":{"name":"Mona Lisa","price":"1200", "type": "replica"}}]
                 Your Output:{"productName":"SoPure Cream","description":"Unable to find the details.","price":null,"toolsUsed" : [ ]}
+                                
+                User Query: "Can I get a summary of my books?"
+                Tool Results: [{"request":{"className":"org.example.Service","methodName":"getSummary","methodArguments":[]},"response":{"uniqueBooks":22, "totalValue": 450.75, "categories": ["Fiction", "Non-Fiction"]}}]
+                Final Output Format: java.lang.String
+                Your Output: "\\"You have **22 unique books** with a total value of **$450.75**.\\\\n\\\\nCategories include:\\\\n* Fiction\\\\n* Non-Fiction\\""
                  
                 [TASK]
                 User Query: "<<<%s>>>"
@@ -369,16 +399,6 @@ class AgentImpl implements Agent {
         );
 
         return synthesisPrompt;
-
-    }
-
-    public static void main(String[] args) throws JsonProcessingException {
-        List<ChatMessage> chatMessages = Arrays.asList(
-                ChatMessage.newInstance(ChatMessage.Role.USER, "What can you help me with?"),
-                ChatMessage.newInstance(ChatMessage.Role.AGENT, "I am you assistant, and I can help you with any information you are looking for.")
-        );
-        String s = ObjectMapperSingleton.getObjectMapper().writeValueAsString(chatMessages);
-        System.out.println(s);
 
     }
 

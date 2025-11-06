@@ -103,6 +103,7 @@ public class ReflectionCaller {
         Method method = clazz.getMethod(methodName, paramTypes);
         Object instance = null;
 
+        method.setAccessible(true);
         // Check if static
         if (!Modifier.isStatic(method.getModifiers())) {
 //            instance = clazz.getDeclaredConstructor().newInstance();
