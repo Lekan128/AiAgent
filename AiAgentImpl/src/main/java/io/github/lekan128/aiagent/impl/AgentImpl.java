@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.lekan128.aiagent.api.Agent;
+import io.github.lekan128.aiagent.api.ChatMessage;
 import io.github.lekan128.aiagent.api.ObjectMapperSingleton;
 import io.github.lekan128.aiagent.api.llm.LLM;
 import io.github.lekan128.aiagent.impl.method.MethodExecutionResult;
@@ -14,6 +15,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -61,10 +64,11 @@ class AgentImpl implements Agent {
      */
     @Override
     public <T> T useAgent(String userQuery, String aiPersona, LLM llm, Class<T> responseClass, Type... responseTypeParameters) throws JsonProcessingException{
-        List<MethodExecutionResult> methodExecutionResults = getMethodExecutionResultsFromAiPlanAndMethodExecution(userQuery, llm);
+        // Non-chat path: pass null chatHistory so prompts receive an empty chat history string
+        List<MethodExecutionResult> methodExecutionResults = getMethodExecutionResultsFromAiPlanAndMethodExecution(userQuery, llm, null);
 
         logger.info("-> Getting final response");
-        T response = AgentImpl.callForFinalResponse(aiPersona, userQuery, methodExecutionResults, llm, responseClass, responseTypeParameters);
+        T response = AgentImpl.callForFinalResponse(aiPersona, userQuery, methodExecutionResults, llm, responseClass, null, responseTypeParameters);
 
         logger.info("Final response generated successfully");
         logger.debug("Final response: {}", response);
@@ -94,10 +98,43 @@ class AgentImpl implements Agent {
      * @throws JsonProcessingException If there is an error during the final response deserialization.
      */
     public <T> T useAgent(String userQuery, String aiPersona, LLM llm, TypeReference<T> typeReference) throws JsonProcessingException {
-        List<MethodExecutionResult> methodExecutionResults = getMethodExecutionResultsFromAiPlanAndMethodExecution(userQuery, llm);
+        // Non-chat path: pass null chatHistory so prompts receive an empty chat history string
+        List<MethodExecutionResult> methodExecutionResults = getMethodExecutionResultsFromAiPlanAndMethodExecution(userQuery, llm, null);
 
         logger.info("-> Getting final response");
-        T response = AgentImpl.callForFinalResponse(aiPersona, userQuery, methodExecutionResults, llm, typeReference);
+        T response = AgentImpl.callForFinalResponse(aiPersona, userQuery, methodExecutionResults, llm, typeReference, null);
+
+        logger.info("Final response generated successfully");
+        logger.debug("Final response: {}", response);
+        return response;
+    }
+
+    /**
+     * Chat-aware entry point. Threads the provided chat history down into both the planning
+     * and final-response prompts. If {@code chatHistory} is null, an empty string is passed
+     * into the prompts (same behaviour as non-chat methods).
+     */
+    public <T> T useChatAgent(String userQuery, String aiPersona, LLM llm, Class<T> responseClass, List<ChatMessage> chatHistory) throws JsonProcessingException {
+        List<MethodExecutionResult> methodExecutionResults = getMethodExecutionResultsFromAiPlanAndMethodExecution(userQuery, llm, chatHistory);
+
+        logger.info("-> Getting final response");
+        T response = AgentImpl.callForFinalResponse(aiPersona, userQuery, methodExecutionResults, llm, responseClass, chatHistory);
+
+        logger.info("Final response generated successfully");
+        logger.debug("Final response: {}", response);
+        return response;
+    }
+
+    /**
+     * Chat-aware entry point. Threads the provided chat history down into both the planning
+     * and final-response prompts. If {@code chatHistory} is null, an empty string is passed
+     * into the prompts (same behaviour as non-chat methods).
+     */
+    public <T> T useChatAgent(String userQuery, String aiPersona, LLM llm, TypeReference<T> typeReference, List<ChatMessage> chatHistory) throws JsonProcessingException {
+        List<MethodExecutionResult> methodExecutionResults = getMethodExecutionResultsFromAiPlanAndMethodExecution(userQuery, llm, chatHistory);
+
+        logger.info("-> Getting final response");
+        T response = AgentImpl.callForFinalResponse(aiPersona, userQuery, methodExecutionResults, llm, typeReference, chatHistory);
 
         logger.info("Final response generated successfully");
         logger.debug("Final response: {}", response);
@@ -105,10 +142,10 @@ class AgentImpl implements Agent {
     }
 
     @NotNull
-    private static List<MethodExecutionResult> getMethodExecutionResultsFromAiPlanAndMethodExecution(String userQuery, LLM llm) throws JsonProcessingException {
+    private static List<MethodExecutionResult> getMethodExecutionResultsFromAiPlanAndMethodExecution(String userQuery, LLM llm, List<ChatMessage> chatHistory) throws JsonProcessingException {
         logger.info("-> Getting plan from AI Agent for query: {}", userQuery);
         List<ReflectionInvocableMethod> invocableMethodList = AgentImpl.callWithToolsForPlan(
-                userQuery, llm
+                userQuery, llm, chatHistory
         );
 
         logger.info("-> Generated {} invocable methods:", invocableMethodList.size());
@@ -120,7 +157,16 @@ class AgentImpl implements Agent {
     }
 
     private static List<ReflectionInvocableMethod> callWithToolsForPlan(String userQuery, LLM llm) throws JsonProcessingException {
-        String completePrompt = getCompletePromptForPlan(userQuery);
+        // default to no chat history
+        return callWithToolsForPlan(userQuery, llm, null);
+    }
+
+    /**
+     * Chat-aware planner call. If {@code chatHistory} is non-null it will be included
+     * in the planner prompt as a JSON string.
+     */
+    private static List<ReflectionInvocableMethod> callWithToolsForPlan(String userQuery, LLM llm, List<ChatMessage> chatHistory) throws JsonProcessingException {
+        String completePrompt = getCompletePromptForPlan(userQuery, chatHistory);
 
 
         String generateContentResponse = llm.call(completePrompt);
@@ -140,9 +186,14 @@ class AgentImpl implements Agent {
         return response;
     }
 
-    private static String getCompletePromptForPlan(String userQuery) throws JsonProcessingException {
+    private static String getCompletePromptForPlan(String userQuery, List<ChatMessage> chatHistory) throws JsonProcessingException {
         String toolsJson = AiUtil.getAiToolsAsJson();
         String outputFormat = Util.convertToString(ReflectionInvocableMethod.class);
+
+        String chatHistoryJson = "";
+        if (chatHistory != null) {
+            chatHistoryJson = ObjectMapperSingleton.getObjectMapper().writeValueAsString(chatHistory);
+        }
 
 
         String completePrompt = String.format("""
@@ -153,7 +204,10 @@ class AgentImpl implements Agent {
                 [RULES]
                 1. Analyze the Query: Carefully examine the user's query to understand their intent.
                 2. Select Tools: From the list of available tools, choose the most appropriate tool(s) to call.
-                3. Generate Arguments: For each tool call, determine the most effective arguments based on the user's query. Do NOT use the entire query as an argument unless it is the most logical.
+                3. Argument Generation:
+                    a. Infer Values: Determine the most effective arguments based on the user's query and chat history.
+                    b. Strict Order & Completeness: Your output MUST include an entry for **every** argument listed in the tool's definition, in the **exact** same order.
+                    c. Handle Optional Values: If an argument is marked `"required": false` and no specific value can be inferred from the query, you MUST set its `"value"` to **null**.
                 4.  Chaining Method Calls:
                     a. Saving a Result: To save a method's output for a later step, add a `"returnObjectKey"` field to its JSON object. The value should be a descriptive placeholder string, like `{{product_name}}` or `{{search_results}}`.
                     b. Using a Saved Result: To use a saved result in a subsequent method, set the argument's `"value"` to the exact placeholder string you defined in a previous step (e.g., `"value": "{{product_name}}"`).
@@ -162,6 +216,9 @@ class AgentImpl implements Agent {
                 7. Empty Plan: If no tools are required to answer the query, you MUST return an empty array `[]`.
                 8. No Extra Text: Do not provide any explanation, field or text outside of the `Output Format` VAID JSON array.
                             
+                [CHAT_HISTORY]
+                %s
+
                 [TOOLS AVAILABLE]
                 %s
                             
@@ -190,13 +247,32 @@ class AgentImpl implements Agent {
                         "returnObjectKey": "{{arg0}}"
                     }
                  ]
+                3.Handling Optional/Null Arguments
+                User Query: "Can I get the complete summary of my tabs?"
+                Your Output: [
+                    {
+                        "className": "org.example.Util",
+                        "methodName": "getTabSummary",
+                        "methodArguments": [
+                            {
+                                "type": "java.time.LocalDateTime",
+                                "value": null
+                            },
+                            {
+                                "type": "java.lang.String",
+                                "value": null
+                            }
+                        ],
+                        "returnObjectKey": "{{tab_summary}}"
+                    }
+                ]
                             
                             
                 [TASK]
                 User Query: "<<<%s>>>"
                 Output Format: [%s]
                 Your Output:
-                """, toolsJson, userQuery, outputFormat);
+                """, chatHistoryJson, toolsJson, userQuery, outputFormat);
         return completePrompt;
     }
 
@@ -204,8 +280,9 @@ class AgentImpl implements Agent {
      *
      * @param aiPersona example = "A product describer, that give description of products to be sold online"
      * */
-    private static <T> T callForFinalResponse(String aiPersona, String userQuery, List<MethodExecutionResult> executionResults, LLM llm, Class<T> responseType, Type... responseTypeParameters) throws JsonProcessingException {
-        String completePrompt = getPromptForFinalResult(aiPersona, userQuery, executionResults, responseType, responseTypeParameters);
+    private static <T> T callForFinalResponse(String aiPersona, String userQuery, List<MethodExecutionResult> executionResults, LLM llm, Class<T> responseType, List<ChatMessage> chatHistory, Type... responseTypeParameters) throws JsonProcessingException {
+        // non-chat path -> pass null chatHistory
+        String completePrompt = getPromptForFinalResult(aiPersona, userQuery, executionResults, responseType, chatHistory, responseTypeParameters);
 
 
         String generateContentResponse = llm.call(completePrompt);
@@ -215,6 +292,7 @@ class AgentImpl implements Agent {
             T response = objectMapper.readValue(generateContentResponse.replace("```json", "").replace("```", ""), responseType);
             return response;
         } catch (JsonProcessingException e) {
+            logger.info("Unable to convert {} response: {} to POJO\n {}.", llm.getModelName(), generateContentResponse, e.getMessage());
             throw new RuntimeException("Unable to convert " + llm.getModelName() + " generateContentResponse to POJO\n"+e + '\n' + generateContentResponse);
         }
     }
@@ -223,9 +301,9 @@ class AgentImpl implements Agent {
      *
      * @param aiPersona example = "A product describer, that give description of products to be sold online"
      * */
-    private static <T> T callForFinalResponse(String aiPersona, String userQuery, List<MethodExecutionResult> executionResults, LLM llm, TypeReference<T> typeReference) throws JsonProcessingException {
+    private static <T> T callForFinalResponse(String aiPersona, String userQuery, List<MethodExecutionResult> executionResults, LLM llm, TypeReference<T> typeReference, List<ChatMessage> chatHistory) throws JsonProcessingException {
         Util.RawTypeInfo rawTypeInfo = Util.extractRawTypeInfo(typeReference);
-        String completePrompt = getPromptForFinalResult(aiPersona, userQuery, executionResults, rawTypeInfo.rawType(), rawTypeInfo.parameters());
+        String completePrompt = getPromptForFinalResult(aiPersona, userQuery, executionResults, rawTypeInfo.rawType(), chatHistory, rawTypeInfo.parameters());
 
 
         String generateContentResponse = llm.call(completePrompt);
@@ -239,22 +317,28 @@ class AgentImpl implements Agent {
         }
     }
 
-    private static <T> String getPromptForFinalResult(String aiPersonality, String userQuery, List<MethodExecutionResult> executionResults, Class<T> responseType, Type... responseTypeParameters) throws JsonProcessingException {
+    private static <T> String getPromptForFinalResult(String aiPersonality, String userQuery, List<MethodExecutionResult> executionResults, Class<T> responseType, List<ChatMessage> chatHistory, Type... responseTypeParameters) throws JsonProcessingException {
         String toolResultsJson = ObjectMapperSingleton.getObjectMapper().writeValueAsString(executionResults); // The JSON from your list of ToolExecutionResult
         String finalOutputFormat = Util.convertToString(responseType, responseTypeParameters);
         String chatHistoryJson = "";
+        if (chatHistory != null) {
+            chatHistoryJson = ObjectMapperSingleton.getObjectMapper().writeValueAsString(chatHistory);
+        }
 
         String synthesisPrompt = String.format("""
                 [SYSTEM_INSTRUCTIONS]
                 You are %s.
-                Your purpose is to synthesize a final answer by analyzing the user's query, the conversation history, and the results from any tools that were called.
-                
+                Your **sole purpose** is to generate a single, valid JSON object that synthesizes a final answer.
+                You must analyze the user's query, the conversation history, and the tool results to populate this JSON.
+                                
                 [RULES]
                 1. Primary Goal: Your main goal is to answer the user's latest query in the `[TASK]` section.
                 2. Use All Context: Use the `[CHAT_HISTORY]` to understand the flow of the conversation and the `[TOOL_RESULTS]` for factual data.
                 3. Synthesize: The tool results may represent a sequence of steps. Analyse the entire chain to understand the data flow. Focus on and combine the most relevant tool responses to construct your answer.
                 4. Handle Missing Info: If the `[CHAT_HISTORY]` or `[TOOL_RESULTS]` are empty, unhelpful, or don't contain enough information, use the JSON value `null` for non-string fields (like numbers, booleans, objects) of the Final Output Format. For string fields, state that you were unable to find the details. Do not invent information.
-                5. Strictly Adhere to Format: Your final output MUST be a single, VALID JSON that conforms to the Final Output Format. Provide no other text.
+                5. Strictly Adhere to Format: Your final output MUST be a single, VALID JSON that conforms to the Final Output Format. 
+                    a. Provide no other text. Your output must be the raw, unformatted JSON.
+                    b. If the format is a JSON string, return only that string (with its outer quotes).
                                 
                 [CHAT_HISTORY]
                 %s
@@ -281,21 +365,32 @@ class AgentImpl implements Agent {
                     "price": 203399.99,
                     "toolsUsed" : [ "getCurrentUserId", "getUsersTopProductName", "search" ]
                 }
-                
+                                
                 // Example 2: A single-step query with helpful results
                 User Query: "What is AI"
                 Tool Results: [{"request":{"className":"org.example.google.Search","methodName":"search","methodArguments":[{"type":"java.lang.String","value":"Summary of AI"}]},"response":"AI (Artificial Intelligence) is the development of computer systems capable of performing tasks that typically require human intelligence."}]
                 Your Output:{"summary":"AI is the development of computer systems performing human-like tasks","researchAbout":"AI (Artificial Intelligence)"}
-                
+                                
                 // Example 3: A single-step query with unhelpful results
                 User Query: "SoPure Cream"
                 Tool Results: [{"request":{"className":"org.example.ProductService","methodName":"findProduct","methodArguments":[{"type":"java.lang.String","value":"Mona Lisa"}],"returnObjectKey" : "{{product_details}}"},"response":{"name":"Mona Lisa","price":"1200", "type": "replica"}}]
                 Your Output:{"productName":"SoPure Cream","description":"Unable to find the details.","price":null,"toolsUsed" : [ ]}
                  
+                // Example 4: A char with helpful results
+                User Query: "SoPure Cream"
+                Chat History: ""
+                Tool Results: [{"request":{"className":"org.example.ProductService","methodName":"findProduct","methodArguments":[{"type":"java.lang.String","value":"Mona Lisa"}],"returnObjectKey" : "{{product_details}}"},"response":{"name":"Mona Lisa","price":"1200", "type": "replica"}}]
+                Your Output:{"productName":"SoPure Cream","description":"Unable to find the details.","price":null,"toolsUsed" : [ ]}
+                                
+                User Query: "Can I get a summary of my books?"
+                Tool Results: [{"request":{"className":"org.example.Service","methodName":"getSummary","methodArguments":[]},"response":{"uniqueBooks":22, "totalValue": 450.75, "categories": ["Fiction", "Non-Fiction"]}}]
+                Final Output Format: java.lang.String
+                Your Output: "\\"You have **22 unique books** with a total value of **$450.75**.\\\\n\\\\nCategories include:\\\\n* Fiction\\\\n* Non-Fiction\\""
+                 
                 [TASK]
                 User Query: "<<<%s>>>"
                 Final Output Format: %s
-                Your Output:
+                Your *VALID JSON* Output:
                 """, aiPersonality,
                 chatHistoryJson, // A JSON representation of the conversation so far
                 toolResultsJson, // The JSON from your ToolExecutionResult
@@ -306,6 +401,5 @@ class AgentImpl implements Agent {
         return synthesisPrompt;
 
     }
-
 
 }
