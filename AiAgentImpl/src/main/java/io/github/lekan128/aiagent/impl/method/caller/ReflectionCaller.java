@@ -3,6 +3,7 @@ package io.github.lekan128.aiagent.impl.method.caller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.lekan128.aiagent.api.InstanceProvider;
 import io.github.lekan128.aiagent.api.ObjectMapperSingleton;
 import io.github.lekan128.aiagent.impl.method.MethodExecutionResult;
 import org.slf4j.Logger;
@@ -53,6 +54,26 @@ public class ReflectionCaller {
         return result;
     }
 
+    private static InstanceProvider instanceProvider;
+
+    public static void setInstanceProvider(InstanceProvider provider) {
+        instanceProvider = provider;
+    }
+
+    private static Object getInstance(Class<?> clazz)
+            throws NoSuchMethodException, InvocationTargetException,
+            InstantiationException, IllegalAccessException {
+        if (instanceProvider != null) {
+            try {
+                return instanceProvider.getInstance(clazz);
+            } catch (Exception e) {
+                // fallback to default if the provider fails
+                logger.debug("No instanceProvider set by user. Falling back to default.");
+            }
+        }
+        return clazz.getDeclaredConstructor().newInstance();
+    }
+
     private static Object callMethod(
             String className,
             String methodName,
@@ -60,7 +81,6 @@ public class ReflectionCaller {
             Map<String,Object> methodArgumentPlaceHolders
     ) throws NoSuchMethodException, ClassNotFoundException, InvocationTargetException, InstantiationException, IllegalAccessException {
         Class<?> clazz = Class.forName(className);
-        Object instance = null;
 
         // Convert argument type names to Class objects
         Class<?>[] paramTypes = new Class<?>[args.size()];
@@ -81,10 +101,12 @@ public class ReflectionCaller {
         }
 
         Method method = clazz.getMethod(methodName, paramTypes);
+        Object instance = null;
 
+        method.setAccessible(true);
         // Check if static
         if (!Modifier.isStatic(method.getModifiers())) {
-            instance = clazz.getDeclaredConstructor().newInstance();
+            instance = getInstance(clazz);
         }
 
         return method.invoke(instance, paramValues);
